@@ -7,11 +7,11 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 print('loading data...')
 
-if not os.path.isfile('../data/train.txt'):
-    train, val, test = process_raw("../data/raw/AFDBv4_90.128-254.fasta")
-    train.to_csv('../data/train.txt', index=False, header=False)
-    test.to_csv('../data/test.txt', index=False, header=False)
-    val.to_csv('../data/val.txt', index=False, header=False)
+if not os.path.isfile('data/train.txt'):
+    train, val, test = process_raw("data/raw/AFDBv4_90.128-254.fasta")
+    train.to_csv('data/train.txt', index=False, header=False)
+    test.to_csv('data/test.txt', index=False, header=False)
+    val.to_csv('data/val.txt', index=False, header=False)
 
 train_data = process_file('../data/train.txt')
 val_data = process_file('../data/val.txt')
