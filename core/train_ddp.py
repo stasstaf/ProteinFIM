@@ -5,6 +5,8 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+print('loading data...')
+
 if not os.path.isfile('../data/train.txt'):
     train, val, test = process_raw("../data/raw/AFDBv4_90.128-254.fasta")
     train.to_csv('../data/train.txt', index=False, header=False)
@@ -20,6 +22,8 @@ stoi = {c: i for i, c in enumerate(vocab)}
 itos = {i: c for i, c in enumerate(vocab)}
 encode = lambda s: torch.LongTensor([stoi[c] for c in s])
 decode = lambda l: "".join([itos[i] for i in l])
+
+print('data loaded successfully')
 
 
 def setup(rank, world_size):
@@ -46,7 +50,7 @@ def main(rank, world_size):
     ddp_model = DDP(model, device_ids=[rank], output_device=rank)
 
     batch_size = 512
-    steps = 1000
+    steps = 10000
     ctx_size = config.ctx_size
 
     def get_batch(split, rank, world_size):
@@ -76,6 +80,8 @@ def main(rank, world_size):
     if is_main_process():
         print()
         print(f"Final loss: {loss.item()}")
+        path = "./fim_gpt.pth"
+        torch.save(ddp_model, path)
 
     cleanup()
 
