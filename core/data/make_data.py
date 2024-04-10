@@ -14,8 +14,15 @@ def process_raw(file_path, test_size=0.75):
         sequences = [seq.strip() for seq in lines if not seq.startswith(">")]
         df = pd.DataFrame({'sequence': sequences})
     train_data, test_data = train_test_split(df, test_size=test_size, shuffle=True, random_state=42)
-    test_data, val_data = train_test_split(test_data, test_size=(1-test_size)/2, shuffle=True, random_state=42)
+    test_data, val_data = train_test_split(test_data, test_size=(1 - test_size) / 2, shuffle=True, random_state=42)
     return train_data, val_data, test_data
+
+
+def process_for_val_batch(file_name):
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+        sequences = [seq.strip() for seq in lines if not seq.startswith(">")]
+    return sequences
 
 
 def process_file(file_path):
