@@ -51,7 +51,7 @@ def main(rank, world_size):
     setup(rank, world_size)
     device = torch.device("cuda", rank)
     print(device)
-    config = GPTConfig()
+    config = GPTConfig(device)
     model = LanguageModel(config)
     model = model.to(device)
     ddp_model = DDP(model, device_ids=[rank])

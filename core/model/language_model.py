@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 @dataclass
 class GPTConfig:
+    device: torch.device
     vocab_size: int = 25
     num_layers: int = 3
     num_heads: int = 3
@@ -85,7 +86,7 @@ class LanguageModel(nn.Module):
     def forward(self, inputs, targets=None):
         # batch, ctx, vocab_size
         tok_emb = self.embedding(inputs) # batch, ctx, embed_size
-        pos_emb = self.pos_embedding(torch.arange(inputs.size(1)))
+        pos_emb = self.pos_embedding(torch.arange(inputs.size(1), device=self.config.device))
         logits = tok_emb + pos_emb
         logits = self.blocks(logits)  # batch, ctx, embed_size
         logits = self.ln(logits)  # batch, ctx, embed_size
