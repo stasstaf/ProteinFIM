@@ -33,11 +33,11 @@ print('data loaded successfully')
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12345'
+    dist.init_process_group('nccl', rank=rank, world_size=world_size)
     if is_main_process():
         wandb.login(key='353758ac65c9ac5ceab0c5b51ce078ea9176161d')
         wandb.init(project='diploma', entity='stasstaf')
 
-    dist.init_process_group('nccl', rank=rank, world_size=world_size)
 
 
 def cleanup():
