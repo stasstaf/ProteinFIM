@@ -77,13 +77,16 @@ class LanguageModel(nn.Module):
         super().__init__()
         self.config = config
         self.embedding = nn.Embedding(config.vocab_size, config.embed_size)
+        self.pos_embedding = nn.Embedding(config.ctx_size, config.embed_size)
         self.blocks = nn.Sequential(*[Block(config.num_heads, config.embed_size, config.ctx_size, config.dropout) for _ in range(config.num_layers)])
         self.ln = nn.LayerNorm(config.embed_size)
         self.ff = nn.Linear(config.embed_size, config.vocab_size)
 
     def forward(self, inputs, targets=None):
         # batch, ctx, vocab_size
-        logits = self.embedding(inputs)  # batch, ctx, embed_size
+        tok_emb = self.embedding(inputs) # batch, ctx, embed_size
+        pos_emb = self.pos_embedding(torch.arange(inputs.size(1)))
+        logits = tok_emb + pos_emb
         logits = self.blocks(logits)  # batch, ctx, embed_size
         logits = self.ln(logits)  # batch, ctx, embed_size
         logits = self.ff(logits)  # batch, ctx, vocab_size
