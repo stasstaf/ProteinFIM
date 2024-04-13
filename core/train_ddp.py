@@ -54,10 +54,10 @@ def main(rank, world_size):
     config = GPTConfig()
     model = LanguageModel(config)
     model = model.to(device)
-    ddp_model = DDP(model, device_ids=[rank], output_device=rank)
+    ddp_model = DDP(model, device_ids=[rank])
 
     batch_size = 512
-    steps = 10000
+    steps = 100000000000
     ctx_size = config.ctx_size
 
     def get_batch(split, rank, world_size):
@@ -176,6 +176,9 @@ def main(rank, world_size):
                     "FIM Loss": loss_3,
                     "FIM Middle Loss": loss_4
                 })
+            if step % 10000 == 0 and is_main_process():
+                path = f"./fim_gpt_{step}.pth"
+                torch.save(ddp_model.state_dict(), path)
 
     if is_main_process():
         print()
@@ -190,4 +193,5 @@ def main(rank, world_size):
 
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
+    assert world_size > 2, f"Requires at least 2 GPUs to run, but got {world_size}"
     torch.multiprocessing.spawn(main, args=(world_size,), nprocs=world_size)
