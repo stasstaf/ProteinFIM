@@ -8,7 +8,7 @@ torch.manual_seed(SEED)
 rng = np.random.default_rng(SEED)
 
 
-def process_raw(file_path, test_size=0.75):
+def process_raw(file_path, test_size=0.2):
     with open(file_path, "r") as file:
         lines = file.readlines()
         sequences = [seq.strip() for seq in lines if not seq.startswith(">")]
