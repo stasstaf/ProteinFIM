@@ -74,7 +74,7 @@ class Block(nn.Module):
 
 
 class LanguageModel(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, stoi, itos):
         super().__init__()
         self.config = config
         self.embedding = nn.Embedding(config.vocab_size, config.embed_size)
@@ -82,6 +82,8 @@ class LanguageModel(nn.Module):
         self.blocks = nn.Sequential(*[Block(config.num_heads, config.embed_size, config.ctx_size, config.dropout) for _ in range(config.num_layers)])
         self.ln = nn.LayerNorm(config.embed_size)
         self.ff = nn.Linear(config.embed_size, config.vocab_size)
+        self.stoi = stoi
+        self.itos = itos
 
     def forward(self, inputs, targets=None):
         # batch, ctx, vocab_size
@@ -113,20 +115,20 @@ class LanguageModel(nn.Module):
             tokens = torch.cat((tokens, next_token), dim=1)
         return tokens
 
-    def calculate_loss(self, batch_tokens, targets, stoi, mode='psm', indexes=None, device=None):
+    def calculate_loss(self, batch_tokens, targets, mode='psm', indexes=None, device=None):
         if device is None:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         if mode == 'psm':
             mask = torch.zeros_like(batch_tokens).to(device)
 
-            hash_index = torch.tensor(stoi['#']).to(device)
+            hash_index = torch.tensor(self.stoi['#']).to(device)
             indices = (batch_tokens == hash_index).nonzero()[:, 1] + 1
 
             for b, idx in enumerate(indices):
                 mask[b, idx:] = 1
 
-            pad_index = torch.tensor(stoi['0']).to(device)
+            pad_index = torch.tensor(self.stoi['0']).to(device)
             mask = (mask & (batch_tokens != pad_index)).to(torch.long)
 
             logits, _ = self(batch_tokens)
@@ -140,7 +142,7 @@ class LanguageModel(nn.Module):
             for b, idx in enumerate(indexes):
                 mask[b, idx:] = 1
 
-            pad_index = torch.tensor(stoi['0']).to(device)
+            pad_index = torch.tensor(self.stoi['0']).to(device)
             mask = (mask & (batch_tokens != pad_index)).to(torch.long)
 
             logits, _ = self(batch_tokens)
@@ -150,7 +152,7 @@ class LanguageModel(nn.Module):
             loss = (loss * mask[:, 1:]).sum() / mask.sum()
 
         elif mode == 'default':
-            pad_index = torch.tensor(stoi['0']).to(device)
+            pad_index = torch.tensor(self.stoi['0']).to(device)
             mask = (batch_tokens != pad_index).to(torch.long)
             logits, _ = self(batch_tokens)
             logits = logits[:, -batch_tokens.shape[1] + 1:, :]

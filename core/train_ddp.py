@@ -33,8 +33,9 @@ print('data loaded successfully')
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12345'
-    wandb.login(key='353758ac65c9ac5ceab0c5b51ce078ea9176161d')
-    wandb.init(project='diploma', entity='stasstaf')
+    if is_main_process():
+        wandb.login(key='353758ac65c9ac5ceab0c5b51ce078ea9176161d')
+        wandb.init(project='diploma', entity='stasstaf')
 
     dist.init_process_group('nccl', rank=rank, world_size=world_size)
 
@@ -52,7 +53,7 @@ def main(rank, world_size):
     device = torch.device("cuda", rank)
     print(device)
     config = GPTConfig(device)
-    model = LanguageModel(config)
+    model = LanguageModel(config, stoi, itos)
     model = model.to(device)
     ddp_model = DDP(model, device_ids=[rank])
 
