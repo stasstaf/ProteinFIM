@@ -57,7 +57,7 @@ def main(rank, world_size):
     model = model.to(device)
     ddp_model = DDP(model, device_ids=[rank])
 
-    batch_size = 512
+    batch_size = 896
     steps = 100000000000
     ctx_size = config.ctx_size
 
@@ -149,7 +149,7 @@ def main(rank, world_size):
         optim.step()
 
         if step % 100 == 0 and is_main_process():
-            model.eval()
+            ddp_model.eval()
             with torch.no_grad():
                 splits = {}
                 for split in ['train', 'val']:
@@ -177,9 +177,10 @@ def main(rank, world_size):
                     "FIM Loss": loss_3,
                     "FIM Middle Loss": loss_4
                 })
-            if step % 10000 == 0 and is_main_process():
-                path = f"./fim_gpt_{step}.pth"
-                torch.save(ddp_model.state_dict(), path)
+                ddp_model.train()
+        if step % 10000 == 0 and is_main_process():
+            path = f"./fim_gpt_{step}.pth"
+            torch.save(ddp_model.state_dict(), path)
 
     if is_main_process():
         print()
