@@ -149,8 +149,8 @@ def main(rank, world_size):
         x3 = torch.stack(xs3).to(device)
         y3 = torch.stack(ys3).to(device)
 
-        x4 = torch.stack(xs3).to(device)
-        y4 = torch.stack(ys3).to(device)
+        x4 = torch.stack(xs4).to(device)
+        y4 = torch.stack(ys4).to(device)
 
         mask = torch.stack(mask).to(device)
         return x1, x2, x3, y1, y2, y3, mask, x4, y4
