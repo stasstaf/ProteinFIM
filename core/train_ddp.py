@@ -11,9 +11,8 @@ import wandb
 print('loading data...')
 
 if not os.path.isfile('data/train.txt'):
-    train, val, test = process_raw("data/raw/AFDBv4_90.128-254.fasta")
+    train, val = process_raw("data/raw/AFDBv4_90.128-254.fasta")
     train.to_csv('data/train.txt', index=False, header=False)
-    test.to_csv('data/test.txt', index=False, header=False)
     val.to_csv('data/val.txt', index=False, header=False)
 
 train_data = process_file('data/train.txt')
@@ -82,6 +81,8 @@ def main(rank, world_size):
         ys2 = []
         xs3 = []
         ys3 = []
+        xs4 = []
+        ys4 = []
 
         mask = []
         for i in ix:
@@ -96,6 +97,12 @@ def main(rank, world_size):
 
             sample_x1 = encode(fim_sample[:ctx_size])
             sample_y1 = encode(fim_sample[1:ctx_size + 1])
+
+            prefix, middle, suffix = document[:idx1], document[idx1:idx2], document[idx2:]
+            fim_sample = '$' + suffix + '@' + prefix + '#' + middle
+
+            sample_x4 = encode(fim_sample[:ctx_size])
+            sample_y4 = encode(fim_sample[1:ctx_size + 1])
 
             fim_sample = prefix + middle
 
@@ -116,6 +123,10 @@ def main(rank, world_size):
             sample_x3 = F.pad(sample_x3, (0, max(0, ctx_size - len(sample_x3))), value=stoi['0'])
             sample_y3 = F.pad(sample_y3, (0, max(0, ctx_size - len(sample_y3))), value=stoi['0'])
 
+            sample_x4 = F.pad(sample_x4, (0, max(0, ctx_size - len(sample_x4))), value=stoi['0'])
+            sample_y4 = F.pad(sample_y4, (0, max(0, ctx_size - len(sample_y4))), value=stoi['0'])
+
+
             xs1.append(sample_x1)
             ys1.append(sample_y1)
 
@@ -124,6 +135,10 @@ def main(rank, world_size):
 
             xs3.append(sample_x3)
             ys3.append(sample_y3)
+
+            xs4.append(sample_x4)
+            ys4.append(sample_y4)
+
 
         x1 = torch.stack(xs1).to(device)
         y1 = torch.stack(ys1).to(device)
@@ -134,8 +149,11 @@ def main(rank, world_size):
         x3 = torch.stack(xs3).to(device)
         y3 = torch.stack(ys3).to(device)
 
+        x4 = torch.stack(xs3).to(device)
+        y4 = torch.stack(ys3).to(device)
+
         mask = torch.stack(mask).to(device)
-        return x1, x2, x3, y1, y2, y3, mask
+        return x1, x2, x3, y1, y2, y3, mask, x4, y4
 
     optim = torch.optim.AdamW(ddp_model.parameters(), lr=3e-5)
     ddp_model.train()
@@ -159,7 +177,7 @@ def main(rank, world_size):
                         logits, loss = model(X, y)
                         losses[k] = loss.item()
                     splits[split] = losses.mean()
-                x1, x2, x3, y1, y2, y3, ixs = get_val_batch()
+                x1, x2, x3, y1, y2, y3, ixs, x4, y4 = get_val_batch()
                 loss_1 = model.calculate_loss(x3, y3, mode='default')
 
                 loss_2 = model.calculate_loss(x2, y2, mode='pms', indexes=ixs)
@@ -168,6 +186,8 @@ def main(rank, world_size):
 
                 loss_4 = model.calculate_loss(x1, y1, mode='psm')
 
+                loss_5 = model.calculate_loss(x4, y4, mode='psm')
+
                 wandb.log({
                     "Step": step,
                     "Train Loss": splits['train'],
@@ -175,9 +195,11 @@ def main(rank, world_size):
                     "AR Loss": loss_1,
                     "AR Middle Loss": loss_2,
                     "FIM Loss": loss_3,
-                    "FIM Middle Loss": loss_4
+                    "FIM Middle Loss": loss_4,
+                    "FIM Middle Loss (SPM)": loss_5
                 })
                 ddp_model.train()
+
         if step % 10000 == 0 and is_main_process():
             path = f"./fim_gpt_{step}.pth"
             torch.save(ddp_model.state_dict(), path)
@@ -195,5 +217,5 @@ def main(rank, world_size):
 
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
-    assert world_size >= 2, f"Requires at least 2 GPUs to run, but got {world_size}"
+    # assert world_size >= 2, f"Requires at least 2 GPUs to run, but got {world_size}"
     torch.multiprocessing.spawn(main, args=(world_size,), nprocs=world_size)
