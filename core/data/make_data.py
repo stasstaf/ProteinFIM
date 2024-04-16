@@ -44,7 +44,8 @@ def process_file(file_path):
         if p > 0.75:  # PSM
             fim_sample = '@' + prefix + '$' + suffix + '#' + middle
         elif p > 0.5:  # SPM
-            fim_sample = '$' + suffix + '@' + prefix + '#' + middle
+            # fim_sample = '$' + suffix + '@' + prefix + '#' + middle
+            fim_sample = '@' + '$' + suffix + '#' + prefix + middle  # SPM v2
         else:  # default
             fim_sample = prefix + middle + suffix
 

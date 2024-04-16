@@ -136,7 +136,7 @@ class LanguageModel(nn.Module):
             loss = F.cross_entropy(logits.permute(0, 2, 1), targets[:, 1:], reduction='none')
             loss = (loss * mask[:, 1:]).sum() / mask.sum()
 
-        elif mode == 'pms':
+        elif mode == 'pms' or mode == 'spm':
             mask = torch.zeros_like(batch_tokens).to(device)
 
             for b, idx in enumerate(indexes):

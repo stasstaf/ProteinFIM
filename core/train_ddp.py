@@ -85,6 +85,8 @@ def main(rank, world_size):
         ys4 = []
 
         mask = []
+        mask2 = []
+
         for i in ix:
             document = data[i][:ctx_size]
             n = len(document)
@@ -99,7 +101,9 @@ def main(rank, world_size):
             sample_y1 = encode(fim_sample[1:ctx_size + 1])
 
             prefix, middle, suffix = document[:idx1], document[idx1:idx2], document[idx2:]
-            fim_sample = '$' + suffix + '@' + prefix + '#' + middle
+            # fim_sample = '$' + suffix + '@' + prefix + '#' + middle
+            fim_sample = '@' + '$' + suffix + '#' + prefix + middle
+            mask2.append(torch.tensor(len('@' + '$' + suffix + '#' + prefix)))
 
             sample_x4 = encode(fim_sample[:ctx_size])
             sample_y4 = encode(fim_sample[1:ctx_size + 1])
@@ -153,7 +157,8 @@ def main(rank, world_size):
         y4 = torch.stack(ys4).to(device)
 
         mask = torch.stack(mask).to(device)
-        return x1, x2, x3, y1, y2, y3, mask, x4, y4
+        mask2 = torch.stack(mask2).to(device)
+        return x1, x2, x3, y1, y2, y3, mask, x4, y4, mask2
 
     optim = torch.optim.AdamW(ddp_model.parameters(), lr=3e-5)
     ddp_model.train()
@@ -177,7 +182,7 @@ def main(rank, world_size):
                         logits, loss = model(X, y)
                         losses[k] = loss.item()
                     splits[split] = losses.mean()
-                x1, x2, x3, y1, y2, y3, ixs, x4, y4 = get_val_batch()
+                x1, x2, x3, y1, y2, y3, ixs, x4, y4, mask2 = get_val_batch()
                 loss_1 = model.calculate_loss(x3, y3, mode='default')
 
                 loss_2 = model.calculate_loss(x2, y2, mode='pms', indexes=ixs)
@@ -186,7 +191,7 @@ def main(rank, world_size):
 
                 loss_4 = model.calculate_loss(x1, y1, mode='psm')
 
-                loss_5 = model.calculate_loss(x4, y4, mode='psm')
+                loss_5 = model.calculate_loss(x4, y4, mode='spm', indexes=mask2)
 
                 wandb.log({
                     "Step": step,
