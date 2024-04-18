@@ -11,8 +11,8 @@ class GPTConfig:
     num_layers: int = 3
     num_heads: int = 3
     embed_size: int = 512
-    dropout: float = 0.0
-    ctx_size: int = 512
+    dropout: float = 0.05
+    ctx_size: int = 256
 
 
 class Head(nn.Module):
@@ -82,6 +82,7 @@ class LanguageModel(nn.Module):
         self.blocks = nn.Sequential(*[Block(config.num_heads, config.embed_size, config.ctx_size, config.dropout) for _ in range(config.num_layers)])
         self.ln = nn.LayerNorm(config.embed_size)
         self.ff = nn.Linear(config.embed_size, config.vocab_size)
+        self.dropout = nn.Dropout(config.dropout)
         self.stoi = stoi
         self.itos = itos
 
@@ -89,7 +90,7 @@ class LanguageModel(nn.Module):
         # batch, ctx, vocab_size
         tok_emb = self.embedding(inputs) # batch, ctx, embed_size
         pos_emb = self.pos_embedding(torch.arange(inputs.size(1), device=self.config.device))
-        logits = tok_emb + pos_emb
+        logits = self.dropout(tok_emb + pos_emb)
         logits = self.blocks(logits)  # batch, ctx, embed_size
         logits = self.ln(logits)  # batch, ctx, embed_size
         logits = self.ff(logits)  # batch, ctx, vocab_size

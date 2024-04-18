@@ -205,9 +205,12 @@ def main(rank, world_size):
                 })
                 ddp_model.train()
 
-        if step % 10000 == 0 and is_main_process():
-            path = f"./fim_gpt_{step}.pth"
-            torch.save(ddp_model.state_dict(), path)
+        if step % 25000 == 0 and is_main_process():
+            path = f"./fim_gpt_v4_{step}.pth"
+            state = {'model': ddp_model.module.state_dict(),
+                     'optimizer': optim.state_dict(),
+                     }
+            torch.save(state, path)
 
     if is_main_process():
         print()
