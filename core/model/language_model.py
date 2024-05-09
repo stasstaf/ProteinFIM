@@ -8,9 +8,9 @@ from dataclasses import dataclass
 class GPTConfig:
     device: torch.device
     vocab_size: int = 25
-    num_layers: int = 3
-    num_heads: int = 3
-    embed_size: int = 512
+    num_layers: int = 12
+    num_heads: int = 12
+    embed_size: int = 768
     dropout: float = 0.05
     ctx_size: int = 256
 

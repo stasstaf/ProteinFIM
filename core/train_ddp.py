@@ -11,7 +11,7 @@ import wandb
 print('loading data...')
 
 if not os.path.isfile('data/train.txt'):
-    train, val = process_raw("data/raw/AFDBv4_90.128-254.fasta")
+    train, val, _ = process_raw("data/raw/AFDBv4_90.128-254.fasta")
     train.to_csv('data/train.txt', index=False, header=False)
     val.to_csv('data/val.txt', index=False, header=False)
 
@@ -56,7 +56,7 @@ def main(rank, world_size):
     model = model.to(device)
     ddp_model = DDP(model, device_ids=[rank])
 
-    batch_size = 896
+    batch_size = 64
     steps = 100000000000
     ctx_size = config.ctx_size
 
@@ -206,7 +206,7 @@ def main(rank, world_size):
                 ddp_model.train()
 
         if step % 25000 == 0 and is_main_process():
-            path = f"./fim_gpt_v4_{step}.pth"
+            path = f"./fim_gpt_v5_{step}.pth"
             state = {'model': ddp_model.module.state_dict(),
                      'optimizer': optim.state_dict(),
                      }
