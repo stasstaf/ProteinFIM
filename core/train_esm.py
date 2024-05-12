@@ -61,6 +61,12 @@ if __name__ == "__main__":
                     "Validation Loss": val_loss.item()
                 })
                 model.train()
+            if step % 25000 == 0:
+                path = f"./esm_{step}.pth"
+                state = {'model': model.module.state_dict(),
+                         'optimizer': optimizer.state_dict(),
+                         }
+                torch.save(state, path)
 
             step += 1
 
