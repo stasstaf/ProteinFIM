@@ -2,10 +2,43 @@ import torch
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset, DataLoader, random_split
+from transformers import DataCollatorForLanguageModeling, EsmForMaskedLM, EsmTokenizer, EsmConfig
+from Bio import SeqIO
 
 SEED = 43
 torch.manual_seed(SEED)
 rng = np.random.default_rng(SEED)
+
+
+class EsmDataset(Dataset):
+    def __init__(self, file_path, tokenizer, max_length=256):
+        self.sequences = [str(record.seq) for record in SeqIO.parse(file_path, "fasta")]
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.sequences)
+
+    def __getitem__(self, idx):
+        sequence = self.sequences[idx]
+        encoding = self.tokenizer(
+            sequence,
+            truncation=True,
+            max_length=self.max_length,
+            padding='max_length',
+            return_attention_mask=False
+        )
+        return encoding
+
+
+def make_esm_dataset(file_path, tokenizer):
+    full_dataset = EsmDataset(file_path, tokenizer)
+    train_size = int(0.9 * len(full_dataset))
+    val_size = test_size = (len(full_dataset) - train_size) // 2
+    train_dataset, remainder = random_split(full_dataset, [train_size, len(full_dataset) - train_size])
+    val_dataset, test_dataset = random_split(remainder, [val_size, test_size])
+    return train_dataset, val_dataset, test_dataset
 
 
 def process_raw(file_path, test_size=0.1):
