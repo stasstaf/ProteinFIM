@@ -3,3 +3,4 @@ numpy>=1.25.1
 pandas>=1.5.3
 sklearn
 wandb
+transformers
