@@ -12,7 +12,7 @@ rng = np.random.default_rng(SEED)
 
 
 class EsmDataset(Dataset):
-    def __init__(self, file_path, tokenizer, max_length=256):
+    def __init__(self, file_path, tokenizer, max_length=254):
         self.sequences = [str(record.seq) for record in SeqIO.parse(file_path, "fasta")]
         self.tokenizer = tokenizer
         self.max_length = max_length
