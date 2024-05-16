@@ -45,7 +45,8 @@ def train(rank, world_size):
     batch_size = 256
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, collate_fn=data_collator)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, sampler=val_sampler, collate_fn=data_collator)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda", rank)
+    print(device)
     cfg = EsmConfig.from_pretrained("facebook/esm-1b")
     cfg.max_position_embeddings = 256
     cfg.intermediate_size = 768
