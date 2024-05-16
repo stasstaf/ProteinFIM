@@ -42,14 +42,17 @@ class EsmDataset(Dataset):
                 "attention_mask": torch.tensor(attention_mask, dtype=torch.long)}
 
 
-def make_esm_dataset(file_path, tokenizer):
-    full_dataset = EsmDataset(file_path, tokenizer)
-    train_size = int(0.9 * len(full_dataset))
-    val_size = test_size = (len(full_dataset) - train_size) // 2
-    train_dataset, remainder = random_split(full_dataset, [train_size, len(full_dataset) - train_size])
+def make_esm_dataset(file_path, tokenizer, chunk_size=254):
+    full_dataset = EsmDataset(file_path, tokenizer, chunk_size=chunk_size)
+    total_length = len(full_dataset)
+    train_size = int(0.9 * total_length)
+    remaining_size = total_length - train_size
+    val_size = remaining_size // 2
+    test_size = remaining_size - val_size
+    train_dataset, remainder = random_split(full_dataset, [train_size, remaining_size])
     val_dataset, test_dataset = random_split(remainder, [val_size, test_size])
-    return train_dataset, val_dataset, test_dataset
 
+    return train_dataset, val_dataset, test_dataset
 
 def process_raw(file_path, test_size=0.1):
     with open(file_path, "r") as file:
