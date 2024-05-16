@@ -12,7 +12,7 @@ rng = np.random.default_rng(SEED)
 
 
 class EsmDataset(Dataset):
-    def __init__(self, file_path, tokenizer, max_length=254, chunk_size=254):
+    def __init__(self, file_path, tokenizer, chunk_size=256):
         sequences = [str(record.seq) for record in SeqIO.parse(file_path, "fasta")]
         pad_token = tokenizer.eos_token
         all_text = pad_token.join(sequences)
@@ -42,7 +42,7 @@ class EsmDataset(Dataset):
                 "attention_mask": torch.tensor(attention_mask, dtype=torch.long)}
 
 
-def make_esm_dataset(file_path, tokenizer, chunk_size=254):
+def make_esm_dataset(file_path, tokenizer, chunk_size=256):
     full_dataset = EsmDataset(file_path, tokenizer, chunk_size=chunk_size)
     total_length = len(full_dataset)
     train_size = int(0.9 * total_length)
