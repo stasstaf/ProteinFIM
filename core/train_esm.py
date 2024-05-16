@@ -59,7 +59,7 @@ def train(rank, world_size):
     model.train()
 
     model.train()
-    for epoch in range(1000):
+    for epoch in range(1025):
         for step, batch in enumerate(train_loader, start=1):
             inputs = batch['input_ids'].to(rank)
             labels = batch['labels'].to(rank)
@@ -81,7 +81,7 @@ def train(rank, world_size):
                         "Validation Loss": val_loss.item()
                     })
                 model.train()
-        if is_main_process() and epoch in [0, 2, 5] or epoch % 50 == 0:
+        if is_main_process() and epoch in [0, 2, 5] or epoch % 64 == 0:
             path = f"./esm_{epoch}.pth"
             state = {'model': model.module.state_dict(),
                      'optimizer': optimizer.state_dict(),
