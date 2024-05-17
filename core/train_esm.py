@@ -56,6 +56,11 @@ def train(rank, world_size):
     model = EsmForMaskedLM(cfg).to(device)
     optimizer = AdamW(model.parameters(), lr=5e-5)
     if is_main_process():
+        path = f"./esm_0.pth"
+        state = {'model': model.state_dict(),
+                 'optimizer': optimizer.state_dict(),
+                 }
+        torch.save(state, path)
         setup_wandb()
     model.train()
 
