@@ -57,17 +57,12 @@ def train(rank, world_size):
     model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     optimizer = AdamW(model.parameters(), lr=5e-5)
     if is_main_process():
-        path = f"./esm_0.pth"
-        state = {'model': model.module.state_dict(),
-                 'optimizer': optimizer.state_dict(),
-                 }
-        torch.save(state, path)
         setup_wandb()
     model.train()
 
     model.train()
     for epoch in range(1025):
-        for step, batch in enumerate(train_loader, start=1):
+        for step, batch in enumerate(train_loader):
             inputs = batch['input_ids'].to(rank)
             labels = batch['labels'].to(rank)
             outputs = model(inputs, labels=labels)
