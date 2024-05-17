@@ -54,10 +54,11 @@ def train(rank, world_size):
     cfg.num_attention_heads = 12
     cfg.num_hidden_layers = 12
     model = EsmForMaskedLM(cfg).to(device)
+    model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     optimizer = AdamW(model.parameters(), lr=5e-5)
     if is_main_process():
         path = f"./esm_0.pth"
-        state = {'model': model.state_dict(),
+        state = {'model': model.module.state_dict(),
                  'optimizer': optimizer.state_dict(),
                  }
         torch.save(state, path)
