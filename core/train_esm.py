@@ -96,7 +96,7 @@ def train(rank, world_size):
                 step += 1
                 model.train()
         if is_main_process() and epoch in [0, 2, 5] or epoch % 64 == 0:
-            path = f"./esm_{epoch}.pth"
+            path = f"./esm_FIM_{epoch}.pth"
             state = {'model': model.module.state_dict(),
                      'optimizer': optimizer.state_dict(),
                      }
