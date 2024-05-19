@@ -93,8 +93,8 @@ def train(rank, world_size):
                         "Validation Loss": val_loss.item(),
                         "Epoch": epoch
                     })
-                step += 1
                 model.train()
+            step += 1
         if is_main_process() and epoch in [0, 2, 5] or epoch % 64 == 0:
             path = f"./esm_FIM_{epoch}.pth"
             state = {'model': model.module.state_dict(),
