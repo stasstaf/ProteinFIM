@@ -73,7 +73,6 @@ def train(rank, world_size):
         train_sampler.set_epoch(epoch)
         val_sampler.set_epoch(epoch)
         for batch in train_loader:
-            step += 1
             inputs = batch['input_ids'].to(rank)
             labels = batch['labels'].to(rank)
             outputs = model(inputs, labels=labels)
@@ -94,6 +93,7 @@ def train(rank, world_size):
                         "Validation Loss": val_loss.item(),
                         "Epoch": epoch
                     })
+                step += 1
                 model.train()
         if is_main_process() and epoch in [0, 2, 5] or epoch % 64 == 0:
             path = f"./esm_{epoch}.pth"
