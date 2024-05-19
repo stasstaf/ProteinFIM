@@ -61,8 +61,12 @@ def train(rank, world_size):
     model.train()
 
     model.train()
+    step = 0
     for epoch in range(1025):
-        for step, batch in enumerate(train_loader):
+        train_sampler.set_epoch(epoch)
+        val_sampler.set_epoch(epoch)
+        for batch in train_loader:
+            step += 1
             inputs = batch['input_ids'].to(rank)
             labels = batch['labels'].to(rank)
             outputs = model(inputs, labels=labels)
