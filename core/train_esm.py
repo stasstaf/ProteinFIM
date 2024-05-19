@@ -1,5 +1,5 @@
 from transformers import DataCollatorForLanguageModeling, EsmForMaskedLM, EsmTokenizer, EsmConfig
-from data.make_data import make_esm_dataset
+from data.make_data import make_esm_dataset, DataCollatorForFIM
 from torch.utils.data import DataLoader
 import torch
 from torch.optim import AdamW
@@ -30,13 +30,20 @@ def is_main_process():
 
 
 def train(rank, world_size):
+    mode = 'FIM'
     setup(rank, world_size)
     tokenizer = EsmTokenizer.from_pretrained("facebook/esm-1b")
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=True,
-        mlm_probability=0.15
-    )
+    if mode == 'FIM':
+        data_collator = DataCollatorForFIM(
+            tokenizer=tokenizer,
+            mlm=True
+        )
+    else:
+        data_collator = DataCollatorForLanguageModeling(
+            tokenizer=tokenizer,
+            mlm=True,
+            mlm_probability=0.15
+        )
     file_path = "data/raw/AFDBv4_90.128-254.fasta"
     train_dataset, val_dataset, _ = make_esm_dataset(file_path, tokenizer)
     train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True)
@@ -84,7 +91,8 @@ def train(rank, world_size):
                     wandb.log({
                         "Step": step,
                         "Train Loss": loss.item(),
-                        "Validation Loss": val_loss.item()
+                        "Validation Loss": val_loss.item(),
+                        "Epoch": epoch
                     })
                 model.train()
         if is_main_process() and epoch in [0, 2, 5] or epoch % 64 == 0:

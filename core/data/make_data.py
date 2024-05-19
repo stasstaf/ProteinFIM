@@ -4,11 +4,39 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader, random_split
 from transformers import DataCollatorForLanguageModeling, EsmForMaskedLM, EsmTokenizer, EsmConfig
+from typing import Any, Optional, Tuple
 from Bio import SeqIO
 
 SEED = 43
 torch.manual_seed(SEED)
 rng = np.random.default_rng(SEED)
+
+
+class DataCollatorForFIM(DataCollatorForLanguageModeling):
+    def torch_mask_tokens(self, inputs: Any, special_tokens_mask: Optional[Any] = None) -> Tuple[Any, Any]:
+        """
+        Prepare masked tokens inputs/labels for masked language modeling: 100% of middle part is masked with [MASK].
+        For this custom collator, only the middle part of the sequences is masked.
+        """
+        labels = inputs.clone()
+        batch_size, seq_len = labels.shape
+
+        split_points = torch.sort(torch.randint(1, seq_len - 1, (batch_size, 2)), dim=-1)[0]
+        prefix_lengths = split_points[:, 0]
+        suffix_lengths = split_points[:, 1]
+
+        arange = torch.arange(seq_len).unsqueeze(0).expand(batch_size, -1)
+        prefix_mask = arange < prefix_lengths.unsqueeze(1)
+        suffix_mask = arange >= suffix_lengths.unsqueeze(1)
+
+        non_middle_mask = prefix_mask | suffix_mask
+
+        labels[non_middle_mask] = -100
+
+        mask_token_id = self.tokenizer.convert_tokens_to_ids(self.tokenizer.mask_token)
+        inputs[~non_middle_mask] = mask_token_id
+
+        return inputs, labels
 
 
 class EsmDataset(Dataset):
