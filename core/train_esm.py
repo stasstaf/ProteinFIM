@@ -8,6 +8,20 @@ import os
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
+import re
+
+use_checkpoint = True
+
+
+def find_latest_checkpoint(path_pattern):
+    files = [f for f in os.listdir('.') if re.match(path_pattern, f)]
+    if not files:
+        return None, 0
+
+    numbers = [int(re.search(r'\d+', f).group()) for f in files]
+    max_num = max(numbers)
+
+    return f"./esm_FIM_{max_num}.pth", max_num
 
 
 def setup_wandb():
@@ -63,13 +77,21 @@ def train(rank, world_size):
     model = EsmForMaskedLM(cfg).to(device)
     model = DDP(model, device_ids=[rank], find_unused_parameters=True)
     optimizer = AdamW(model.parameters(), lr=5e-5)
+    checkpoint_pattern = r'esm_FIM_\d+\.pth'
+    checkpoint_path, max_number = find_latest_checkpoint(checkpoint_pattern)
+    start_epoch = 0
+    if use_checkpoint and checkpoint_path:
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model.module.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        start_epoch = max_number + 1
     if is_main_process():
         setup_wandb()
     model.train()
 
     model.train()
     step = 0
-    for epoch in range(1025):
+    for epoch in range(start_epoch, 1025):
         train_sampler.set_epoch(epoch)
         val_sampler.set_epoch(epoch)
         for batch in train_loader:
