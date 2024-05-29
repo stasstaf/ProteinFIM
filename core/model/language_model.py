@@ -15,6 +15,18 @@ class GPTConfig:
     ctx_size: int = 256
 
 
+@dataclass
+class GPTConfigForTesting:
+    device: torch.device
+    vocab_size: int = 25
+    num_layers: int = 1
+    num_heads: int = 1
+    embed_size: int = 128
+    dropout: float = 0.05
+    ctx_size: int = 256
+
+
+
 class Head(nn.Module):
     def __init__(self, embed_size, head_embed_size, ctx_size, dropout=0):
         super().__init__()

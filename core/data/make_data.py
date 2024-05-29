@@ -42,8 +42,8 @@ class DataCollatorForFIM(DataCollatorForLanguageModeling):
 class EsmDataset(Dataset):
     def __init__(self, file_path, tokenizer, chunk_size=254):
         sequences = [str(record.seq) for record in SeqIO.parse(file_path, "fasta")]
-        pad_token = tokenizer.eos_token
-        all_text = pad_token.join(sequences)
+        eos_token = tokenizer.eos_token
+        all_text = eos_token.join(sequences)
 
         self.encoding = tokenizer(
             all_text,

@@ -1,4 +1,4 @@
-from model.language_model import LanguageModel, GPTConfig
+from model.language_model import LanguageModel, GPTConfig, GPTConfigForTesting
 from data.make_data import process_file, process_raw, rng, process_for_val_batch
 import os.path
 import torch
@@ -10,14 +10,14 @@ import wandb
 
 print('loading data...')
 
-if not os.path.isfile('data/train.txt'):
-    train, val, _ = process_raw("data/raw/AFDBv4_90.128-254.fasta")
-    train.to_csv('data/train.txt', index=False, header=False)
-    val.to_csv('data/val.txt', index=False, header=False)
+if not os.path.isfile(r'..\data\train.txt'):
+    train, val, _ = process_raw(r"..\data\raw\AFDBv4_90.128-254.fasta")
+    train.to_csv(r'..\data\train.txt', index=False, header=False)
+    val.to_csv(r'..\data\val.txt', index=False, header=False)
 
-train_data = process_file('data/train.txt')
-val_data = process_file('data/val.txt')
-val_data_df = process_for_val_batch('data/val.txt')
+train_data = process_file(r'..\data\train.txt')
+val_data = process_file(r'..\data\val.txt')
+val_data_df = process_for_val_batch(r'..\data\val.txt')
 
 vocab = sorted(
     list(set("".join(train_data))) + ['0'])  # <PRE> = '@', <MID> = '#', <SUF> = '$', <EOS> = '.', <PAD> = '0'
@@ -48,21 +48,43 @@ def is_main_process():
 
 
 def main(rank, world_size):
-    setup(rank, world_size)
-    device = torch.device("cuda", rank)
-    print(device)
-    config = GPTConfig(device)
-    model = LanguageModel(config, stoi, itos)
-    model = model.to(device)
-    ddp_model = DDP(model, device_ids=[rank])
+    use_ddp = world_size != 0
+    testing = True
+    use_wandb = True
+    if use_ddp:
+        setup(rank, world_size)
+        device = torch.device("cuda", rank)
+    else:
+        device = torch.device("cpu")
 
+    config = GPTConfig(device)
     batch_size = 64
     steps = 100000000000
+    log_freq = 128
+    save_freq = 25000
+    if testing:
+        use_wandb = False
+        config = GPTConfigForTesting(device)
+        batch_size = 2
+        steps = 1024
+        save_freq = 512
+        log_freq = 16
+
+    model = LanguageModel(config, stoi, itos)
+    model = model.to(device)
+    if use_ddp:
+        ddp_model = DDP(model, device_ids=[rank])
+    else:
+        ddp_model = model
+
     ctx_size = config.ctx_size
 
     def get_batch(split, rank, world_size):
         data = train_data if split == 'train' else val_data
-        per_worker = len(data) // world_size
+        if world_size != 0:
+            per_worker = len(data) // world_size
+        else:
+            per_worker = len(data)
         start_ix = rank * per_worker
         end_ix = start_ix + per_worker
         ix = rng.integers(start_ix, min(end_ix, len(data) - ctx_size), size=batch_size)
@@ -171,7 +193,7 @@ def main(rank, world_size):
         loss.backward()
         optim.step()
 
-        if step % 100 == 0 and is_main_process():
+        if step % log_freq == 0 and (not use_ddp or is_main_process()):
             ddp_model.eval()
             with torch.no_grad():
                 splits = {}
@@ -193,7 +215,7 @@ def main(rank, world_size):
 
                 loss_5 = model.calculate_loss(x4, y4, mode='spm', indexes=mask2)
 
-                wandb.log({
+                metrics = {
                     "Step": step,
                     "Train Loss": splits['train'],
                     "Validation Loss": splits['val'],
@@ -202,28 +224,39 @@ def main(rank, world_size):
                     "FIM Loss": loss_3,
                     "FIM Middle Loss": loss_4,
                     "FIM Middle Loss (SPM)": loss_5
-                })
+                }
+                if use_wandb:
+                    wandb.log(metrics)
+                else:
+                    print(metrics)
                 ddp_model.train()
 
-        if step % 25000 == 0 and is_main_process():
+        if step % save_freq == 0 and (not use_ddp or is_main_process()):
             path = f"./fim_gpt_v5_{step}.pth"
-            state = {'model': ddp_model.module.state_dict(),
+            state_dict = ddp_model.module.state_dict() if use_ddp else ddp_model.state_dict()
+            state = {'model': state_dict,
                      'optimizer': optim.state_dict(),
                      }
             torch.save(state, path)
 
-    if is_main_process():
+    if not use_ddp or is_main_process():
         print()
         print(f"Final loss: {loss.item()}")
-        path = "./fim_gpt_last.pth"
-        torch.save(ddp_model, path)
-        wandb.finish()
+        path = "./fim_gpt_v5_last.pth"
+        state_dict = ddp_model.module.state_dict() if use_ddp else ddp_model.state_dict()
+        state = {'model': state_dict,
+                 'optimizer': optim.state_dict(),
+                 }
+        torch.save(state, path)
 
-
-    cleanup()
+    if use_ddp:
+        cleanup()
 
 
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
     # assert world_size >= 2, f"Requires at least 2 GPUs to run, but got {world_size}"
-    torch.multiprocessing.spawn(main, args=(world_size,), nprocs=world_size)
+    if world_size > 0:
+        torch.multiprocessing.spawn(main, args=(world_size,), nprocs=world_size)
+    else:
+        main(0, 0)
