@@ -53,7 +53,7 @@ def train(rank, world_size):
     else:
         device = torch.device("cpu")
     if testing:
-        tokenizer = EsmTokenizer(r'..\data\raw\vocab.txt')
+        tokenizer = EsmTokenizer(r'data/raw/vocab.txt')
     else:
         tokenizer = EsmTokenizer.from_pretrained("facebook/esm-1b")
     if mode == 'FIM':
@@ -67,7 +67,7 @@ def train(rank, world_size):
             mlm=True,
             mlm_probability=0.15
         )
-    file_path = r"..\data\raw\AFDBv4_90.128-254.fasta"
+    file_path = r"data/raw/AFDBv4_90.128-254.fasta"
     train_dataset, val_dataset, _ = make_esm_dataset(file_path, tokenizer)
 
     if testing:

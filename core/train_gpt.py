@@ -10,14 +10,17 @@ import wandb
 
 print('loading data...')
 
-if not os.path.isfile(r'..\data\train.txt'):
-    train, val, _ = process_raw(r"..\data\raw\AFDBv4_90.128-254.fasta")
-    train.to_csv(r'..\data\train.txt', index=False, header=False)
-    val.to_csv(r'..\data\val.txt', index=False, header=False)
+print('loading data...')
 
-train_data = process_file(r'..\data\train.txt')
-val_data = process_file(r'..\data\val.txt')
-val_data_df = process_for_val_batch(r'..\data\val.txt')
+if not os.path.isfile('data/train.txt'):
+    train, val, _ = process_raw("data/raw/AFDBv4_90.128-254.fasta")
+    train.to_csv('data/train.txt', index=False, header=False)
+    val.to_csv('data/val.txt', index=False, header=False)
+
+train_data = process_file('data/train.txt')
+val_data = process_file('data/val.txt')
+val_data_df = process_for_val_batch('data/val.txt')
+
 
 vocab = sorted(
     list(set("".join(train_data))) + ['0'])  # <PRE> = '@', <MID> = '#', <SUF> = '$', <EOS> = '.', <PAD> = '0'
